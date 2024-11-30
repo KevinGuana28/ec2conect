@@ -1,0 +1,45 @@
+name: Build, Push, and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Paso 1: Checkout del código
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # Paso 2: Login en Docker Hub
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    # Paso 3: Build y Push de la imagen
+    - name: Build and Push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        push: true
+        tags: ${{ secrets.DOCKER_USERNAME }}/my-html-image:${{ github.sha }}  # Etiqueta con hash del commit
+
+    # Paso 4: Configuración SSH
+    - name: Configure SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+
+    # Paso 5: Despliegue en EC2
+    - name: Deploy to EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << "EOF"  # Cambié las comillas simples por dobles
+          docker pull ${{ secrets.DOCKER_USERNAME }}/my-html-image:${{ github.sha }}  # Utiliza el tag con hash
+          docker stop $(docker ps -q --filter ancestor=${{ secrets.DOCKER_USERNAME }}/my-html-image:${{ github.sha }}) || true
+          docker run -d -p 80:80 ${{ secrets.DOCKER_USERNAME }}/my-html-image:${{ github.sha }}  # Utiliza el tag con hash
+        EOF
