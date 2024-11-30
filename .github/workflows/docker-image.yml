@@ -26,7 +26,7 @@ jobs:
       uses: docker/build-push-action@v4
       with:
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/my-html-image:${{ github.sha }}  # Etiqueta con hash del commit
+        tags: ${{ secrets.DOCKER_USERNAME }}/my-html-image:latest
 
     # Paso 4: Configuración SSH
     - name: Configure SSH
@@ -38,8 +38,10 @@ jobs:
     # Paso 5: Despliegue en EC2
     - name: Deploy to EC2
       run: |
-        ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << "EOF"  # Cambié las comillas simples por dobles
-          docker pull ${{ secrets.DOCKER_USERNAME }}/my-html-image:${{ github.sha }}  # Utiliza el tag con hash
-          docker stop $(docker ps -q --filter ancestor=${{ secrets.DOCKER_USERNAME }}/my-html-image:${{ github.sha }}) || true
-          docker run -d -p 80:80 ${{ secrets.DOCKER_USERNAME }}/my-html-image:${{ github.sha }}  # Utiliza el tag con hash
+        ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+          # Detener el contenedor que usa el puerto 80 (si existe)
+          docker stop $(docker ps -q --filter "ancestor=${{ secrets.DOCKER_USERNAME }}/my-html-image:latest") || true
+          
+          # Ejecutar el nuevo contenedor en el puerto 80
+          docker run -d -p 80:80 ${{ secrets.DOCKER_USERNAME }}/my-html-image:latest
         EOF
