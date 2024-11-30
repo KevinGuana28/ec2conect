@@ -24,7 +24,7 @@ jobs:
     # Paso 3: Obtener la fecha y hora actual
     - name: Get current timestamp
       id: date
-      run: echo "::set-output name=timestamp::$(date +'%Y%m%d%H%M%S')"
+      run: echo "::set-output name=timestamp::$(date +'%Y%m%d%H%M')"
 
     # Paso 4: Build y Push for image con tag basado en fecha
     - name: Build and Push Docker image
