@@ -39,23 +39,19 @@ jobs:
     - name: Deploy to EC2
       run: |
         ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-          # Verificar que Docker está corriendo
-          docker --version
-          if [ $? -ne 0 ]; then
-            echo "Docker no está instalado o no está funcionando correctamente en la instancia."
-            exit 1
-          fi
-
-          # Verificar si hay contenedores corriendo en el puerto 80
+          # Detener cualquier contenedor que esté usando el puerto 80
           CONTAINER_ID=$(docker ps -q --filter "publish=80")
           if [ ! -z "$CONTAINER_ID" ]; then
-            echo "Contenedor encontrado con ID $CONTAINER_ID. Deteniendo el contenedor..."
+            echo "Deteniendo el contenedor que usa el puerto 80..."
             docker stop $CONTAINER_ID
-          else
-            echo "No se encontró ningún contenedor usando el puerto 80."
+            docker rm $CONTAINER_ID  # Eliminar el contenedor detenido
           fi
 
-          # Ejecutar el nuevo contenedor en el puerto 80
-          echo "Iniciando el contenedor en el puerto 80..."
+          # Descargar la última imagen desde Docker Hub
+          echo "Descargando la última imagen desde Docker Hub..."
+          docker pull ${{ secrets.DOCKER_USERNAME }}/my-html-image:latest
+
+          # Ejecutar el contenedor con la última imagen
+          echo "Iniciando el contenedor con la imagen más reciente..."
           docker run -d -p 80:80 ${{ secrets.DOCKER_USERNAME }}/my-html-image:latest
         EOF
