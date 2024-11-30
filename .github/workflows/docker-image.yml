@@ -10,43 +10,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # Paso 1: Checkout del código
+    # Paso 1: Checkout code
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # Paso 2: Login en Docker Hub
+    # Paso 2: Login Docker Hub
     - name: Log in to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    # Paso 3: Build y Push de la imagen
+    # Paso 3: Build y Push for image
     - name: Build and Push Docker image
       uses: docker/build-push-action@v4
       with:
         push: true
         tags: ${{ secrets.DOCKER_USERNAME }}/my-html-image:latest
 
-    # Paso 4: Configuración SSH
+    # Paso 4: Configuration SSH
     - name: Configure SSH
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
 
-    # Paso 5: Despliegue en EC2
+    # Paso 5: Deploy EC2
     - name: Deploy to EC2
       run: |
         ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-          # Detener cualquier contenedor que esté usando el puerto 80
+          # Stop any container that is using port 80
           CONTAINER_ID=$(docker ps -q --filter "publish=80")
           if [ ! -z "$CONTAINER_ID" ]; then
             echo "Deteniendo el contenedor que usa el puerto 80..."
             docker stop $CONTAINER_ID
           fi
 
-          # Ejecutar el nuevo contenedor en el puerto 80
+          # Run the new container on port 80
           echo "Iniciando el contenedor en el puerto 80..."
           docker run -d -p 80:80 ${{ secrets.DOCKER_USERNAME }}/my-html-image:latest
         EOF
