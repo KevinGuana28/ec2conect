@@ -35,7 +35,7 @@ jobs:
         echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
 
-    # Paso 5: Deploy EC2
+    # Paso 5: Deploy EC2.
     - name: Deploy to EC2
       run: |
         ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
