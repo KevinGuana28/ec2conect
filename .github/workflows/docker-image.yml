@@ -1,4 +1,4 @@
-name: Build, Push, and Deploy
+name: Deploy to EC2
 
 on:
   push:
@@ -6,47 +6,40 @@ on:
       - main
 
 jobs:
-  build-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # Paso 1: Checkout code
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v2
 
-    # Paso 2: Login Docker Hub
-    - name: Log in to Docker Hub
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    # Paso 3: Build y Push for image
-    - name: Build and Push Docker image
-      uses: docker/build-push-action@v4
-      with:
-        push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/my-html-image:latest
-
-    # Paso 4: Configuration SSH
-    - name: Configure SSH
+    - name: Build Docker image
       run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
+        IMAGE_TAG="my-html-image:latest"
+        docker build -t kevinguaa28/$IMAGE_TAG .
+        echo "Built Docker image with tag: latest"
 
-    # Paso 5: Deploy EC2.
+    - name: Push Docker image
+      run: |
+        IMAGE_TAG="my-html-image:latest"
+        docker push kevinguaa28/$IMAGE_TAG
+        echo "Pushed Docker image with tag: latest"
+
     - name: Deploy to EC2
       run: |
         ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-          # Stop any container that is using port 80
-          CONTAINER_ID=$(docker ps -q --filter "publish=80")
-          if [ ! -z "$CONTAINER_ID" ]; then
-            echo "Deteniendo el contenedor que usa el puerto 80..."
-            docker stop $CONTAINER_ID
-          fi
-
-          # Run the new container on port 80
-          echo "Iniciando el contenedor en el puerto 80..."
-          docker run -d -p 80:80 ${{ secrets.DOCKER_USERNAME }}/my-html-image:latest
+          sudo docker pull kevinguaa28/my-html-image:latest
+          sudo docker stop $(sudo docker ps -q)  # Detener los contenedores existentes
+          sudo docker rm $(sudo docker ps -aq)   # Eliminar los contenedores detenidos
+          sudo docker run -d -p 80:80 kevinguaa28/my-html-image:latest
+          echo "Deployed the latest image with tag: latest"
         EOF
