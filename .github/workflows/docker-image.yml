@@ -9,6 +9,7 @@ jobs:
   # Job para construir y enviar la imagen a Docker Hub
   build-and-push:
     runs-on: ubuntu-latest
+    
     steps:
       # Paso 1: Checkout code
       - name: Checkout repository
@@ -38,6 +39,7 @@ jobs:
   # Job para desplegar la aplicación a EC2
   deploy:
     runs-on: ubuntu-latest
+    needs: build-and-push
     if: success()  # Solo si EC2 está disponible
     steps:
       - name: Configure SSH for EC2 deployment
