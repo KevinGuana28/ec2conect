@@ -3,7 +3,7 @@ name: Build, Push, and Deploy
 on:
   push:
     branches:
-      - main
+      - pruebas
 
 jobs:
   # Job para construir y enviar la imagen a Docker Hub
